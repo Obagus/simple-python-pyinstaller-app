@@ -1,28 +1,45 @@
-node {
-    // This step should not normally be used in your script. Consult the inline help for details.
-    withDockerContainer('python:2-alpine') {
-        // some block
+pipeline {
+    agent none
+    stages {
         stage('Build') {
-            checkout scm
-            sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+            agent {
+                docker {
+                    image 'python:2-alpine'
+                }
+            }
+            steps {
+                sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+            }
         }
-    }
-    withDockerContainer('qnib/pytest') {
-        // some block
         stage('Test') {
-            checkout scm
-            sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
-            junit 'test-reports/results.xml'
+            agent {
+                docker {
+                    image 'qnib/pytest'
+                }
+            }
+            steps {
+                sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
+            }
+            post {
+                always {
+                    junit 'test-reports/results.xml'
+                }
+            }
+        }
+        stage('Deliver') {
+            agent {
+                docker {
+                    image 'cdrx/pyinstaller-linux:python2'
+                }
+            }
+            steps {
+                sh 'pyinstaller --onefile sources/add2vals.py'
+            }
+            post {
+                success {
+                    archiveArtifacts 'dist/add2vals'
+                }
+            }
         }
     }
-    stage('Manual Approval') {
-        input message: 'Lanjutkan ke tahap Deploy?'
-    }
-    stage('Deploy') {
-        checkout scm
-        sh 'docker run --rm -v /var/jenkins_home/workspace/submission-cicd-pipeline-oktabagus70/sources:/src cdrx/pyinstaller-linux:python2 \'pyinstaller -F add2vals.py\''
-        archiveArtifacts artifacts: 'sources/add2vals.py', followSymlinks: false
-        sh 'docker run --rm -v /var/jenkins_home/workspace/submission-cicd-pipeline-oktabagus70/sources:/src cdrx/pyinstaller-linux:python2 \'rm -rf build dist\''
-        sleep time: 1, unit: 'MINUTES'
-    } 
 }
