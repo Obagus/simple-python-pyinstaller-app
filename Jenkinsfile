@@ -15,16 +15,14 @@ node {
             junit 'test-reports/results.xml'
         }
     }
-    
-    withDockerContainer('cdrx/pyinstaller-linux:python2') {
-        stage('Manual Approval') {
-            input message: 'Lanjutkan ke tahap Deploy?'
-        }
-        stage('Deploy') {
-            checkout scm
-            sh 'pyinstaller --onefile sources/add2vals.py'
-            archiveArtifacts 'dist/add2vals'
-            sleep time: 1, unit: 'MINUTES'
-        }
+    stage('Manual Approval') {
+        input message: 'Lanjutkan ke tahap Deploy?'
     }
+    stage('Deploy') {
+        checkout scm
+        sh 'pyinstaller --onefile sources/add2vals.py'
+        archiveArtifacts 'dist/add2vals'
+        sleep time: 1, unit: 'MINUTES'
+    }
+    
 }
