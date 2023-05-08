@@ -15,10 +15,11 @@ node {
             junit 'test-reports/results.xml'
         }
     }
-    stage('Manual Approval') {
-        input message: 'Lanjutkan ke tahap Deploy?'
-    }
+    
     withDockerContainer('cdrx/pyinstaller-linux:python2') {
+        stage('Manual Approval') {
+            input message: 'Lanjutkan ke tahap Deploy?'
+        }
         stage('Deploy') {
             checkout scm
             sh 'pyinstaller --onefile sources/add2vals.py'
