@@ -1,30 +1,38 @@
 node {
-    // This step should not normally be used in your script. Consult the inline help for details.
-    withDockerContainer('python:2-alpine') {
-        // some block
-        stage('Build') {
-            checkout scm
+    stage('Build') {
+        docker.image('python:2-alpine').inside {
             sh 'python -m py_compile sources/add2vals.py sources/calc.py'
         }
     }
-    withDockerContainer('qnib/pytest') {
-        // some block
-        stage('Test') {
-            checkout scm
-            sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
-            junit 'test-reports/results.xml'
+    stage('Test') {
+        docker.image('qnib/pytest').inside {
+            try {
+                sh 'py.test --verbose --junit-xml test-reports/results.xml sources/test_calc.py'
+            } catch (Exception e) {
+                echo 'Error: ' + e.toString()
+            } finally {
+                always {
+                    junit 'test-reports/results.xml'
+                }
+            }
         }
     }
     stage('Manual Approval') {
-        // some block
+         // some block
         input message: 'Lanjutkan ke tahap Deploy?'
     }
     stage('Deploy') {
-        // some block
-        checkout scm
-        sh 'docker run --rm -v /var/jenkins_home/workspace/submission-cicd-pipeline-oktabagus70/sources:/src cdrx/pyinstaller-linux:python2 \'pyinstaller -F add2vals.py\''
-        archiveArtifacts artifacts: 'sources/add2vals.py', followSymlinks: false
-        sh 'docker run --rm -v /var/jenkins_home/workspace/submission-cicd-pipeline-oktabagus70/sources:/src cdrx/pyinstaller-linux:python2 \'rm -rf build dist\''
-        sleep time: 1, unit: 'MINUTES'
+        docker.image('cdrx/pyinstaller-linux:python2').inside("--entrypoint=''") {
+            try {
+                sh 'pyinstaller --onefile sources/add2vals.py'
+            } catch (Exception e) {
+                echo 'Error: ' + e.toString()
+            } finally {
+                success {
+                    archiveArtifacts 'dist/add2vals'
+                    sleep 60
+                }
+            }
+        }
     }
 }
