@@ -26,6 +26,8 @@ pipeline {
                 }
             }
         }
+        stage('Manual Approval') {
+        }
         stage('Deliver') {
             agent {
                 docker {
